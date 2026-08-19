@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shlex
 import subprocess
 import sys
@@ -225,6 +226,20 @@ def _last_result_document(output: str) -> dict[str, Any]:
     return documents[-1]
 
 
+TOOL_MARKUP = re.compile(r"<invoke\b|</?antml:|<parameter\s+name=|function_calls")
+
+
+def _leaks_tool_markup(text: str) -> bool:
+    """True when the model emitted literal tool-call markup.
+
+    Under `--tools ""` the model has no legal action, and a prompt naming a file
+    invites it to reach for one anyway. The result is not a datapoint about
+    response style — it is the harness failing to give the model an outlet — so
+    the call is re-rolled rather than handed to a judge.
+    """
+    return bool(TOOL_MARKUP.search(text))
+
+
 def _parse_response(output: str, response_format: str) -> tuple[str, dict[str, Any], float | None]:
     if response_format == "text":
         return output.strip(), {}, None
@@ -298,6 +313,7 @@ def run_evaluations(args: argparse.Namespace) -> int:
                     invocation.extend([runner["budget_flag"], f"{remaining:.4f}"])
                 invocation.append(prompt)
                 completed = None
+                rerolls = 0
                 for attempt in range(args.retries + 1):
                     completed = subprocess.run(
                         invocation,
@@ -307,7 +323,23 @@ def run_evaluations(args: argparse.Namespace) -> int:
                         cwd=ROOT,
                     )
                     if completed.returncode == 0:
-                        break
+                        if attempt >= args.retries:
+                            break
+                        try:
+                            candidate_text, _, _ = _parse_response(
+                                completed.stdout, response_format
+                            )
+                        except (ValueError, json.JSONDecodeError):
+                            break
+                        if not _leaks_tool_markup(candidate_text):
+                            break
+                        rerolls += 1
+                        print(
+                            f"re-roll {rerolls}: {case['id']} trial {trial} emitted tool markup "
+                            "under a tool-less runner",
+                            file=sys.stderr,
+                        )
+                        continue
                     if attempt < args.retries:
                         time.sleep(min(2**attempt, 5))
                 assert completed is not None
@@ -324,6 +356,7 @@ def run_evaluations(args: argparse.Namespace) -> int:
                         f"({shlex.join(invocation[:-1])}):\n{detail}"
                     )
                 text, usage, cost = _parse_response(completed.stdout, response_format)
+                leaked = _leaks_tool_markup(text)
                 if cost is None and not args.allow_unmetered:
                     raise RuntimeError(
                         "Runner did not report dollar cost; rerun with --allow-unmetered only when "
@@ -338,6 +371,7 @@ def run_evaluations(args: argparse.Namespace) -> int:
                     "response": text,
                     "usage": usage,
                     "cost_usd": cost,
+                    "tool_markup": leaked,
                 }
                 destination.write(json.dumps(row, ensure_ascii=False) + "\n")
                 destination.flush()

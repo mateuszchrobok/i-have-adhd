@@ -164,6 +164,25 @@ class EvaluationHarnessTest(unittest.TestCase):
             self.assertEqual(0, run_evals.run_evaluations(args))
             self.assertTrue(marker.exists())
 
+    def test_tool_markup_detector_ignores_ordinary_angle_brackets(self):
+        for label, text in (
+            ("prose", "Build fails at build.ts:88. Fix: create config/app.json."),
+            ("generics", "Use `Array<string>` when `a < b`."),
+            ("html", "The tag <div> renders nothing."),
+            ("comparison", "if (x <= 3 && y > 1) return;"),
+        ):
+            with self.subTest(label):
+                self.assertFalse(run_evals._leaks_tool_markup(text))
+
+    def test_tool_markup_detector_catches_a_leaked_call(self):
+        for label, text in (
+            ("invoke", 'Let me check.\n<invoke name="Bash">'),
+            ("parameter", '<parameter name="command">sed -n 80,95p build.ts</parameter>'),
+            ("orphan", "_calls\nfunction_calls open tag leaked"),
+        ):
+            with self.subTest(label):
+                self.assertTrue(run_evals._leaks_tool_markup(text))
+
     def test_claude_json_parsing_survives_a_stray_second_document(self):
         # The CLI normally prints one JSON document but was observed printing a
         # second one, which made json.loads() on the whole buffer raise
