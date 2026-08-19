@@ -15,7 +15,7 @@ Then read, in this order: `AGENTS.md`, `skills/i-have-adhd/SKILL.md`, `CONTRIBUT
 
 1. Personal fork of an active upstream (`ayghri/i-have-adhd`). Every local delta must survive `git pull upstream main`: additive, in its own block, never interleaved into upstream paragraphs.
 2. `origin` is `mateuszchrobok/i-have-adhd`, default branch `main`. Marketplace installs from a source you choose — a GitHub repo (needs a merge to `main`) or a local directory (live from the working copy).
-3. Personal rules — Polish informal address, rtk, parallelism + model tier, resume over restart, scheduled checks, findings become issues — live in one `## Working agreement` section at the end of `skills/i-have-adhd/SKILL.md`, fenced by `<!-- fork-only: ... -->`. Never numbered `### 11`+: `README.md:68` and `.github/readme/README.{ja,ko,pt-BR,vi,zh-CN}.md:62` each claim "10 rules", and numbering them falsifies six files.
+3. Personal rules — Polish informal address, rtk, parallelism + model tier, resume over restart, scheduled checks, findings become issues — live in one `## Working agreement` section of `skills/i-have-adhd/SKILL.md`, fenced by `<!-- fork-only: ... -->` and positioned **immediately above `## Pre-send check`**. That position was measured, not guessed: at end of file, after the pre-send filter's "If yes, send.", the same bytes cost 0.98 weighted points on a blind eval. Never numbered `### 11`+: `README.md:102` and `.github/readme/README.{ja,ko,pt-BR,vi,zh-CN}.md:62` each claim "10 rules", and numbering them falsifies six files.
 4. Repo-local commands live in `.claude/commands/`: `/init` (this file, shadows the built-in `/init` inside this repo) and `/complete-repo`. Plain `/complete` cannot be used — the user-level skill `complete` wins that name, so a file named `complete.md` here would be dead. Neither command ships in any manifest.
 5. One `SKILL.md` feeds Claude Code, Codex, Pi/OMP, OpenCode, Gemini, Qwen, Kimi. Keep prose runtime-neutral: name a vendor only as a parenthetical gloss, and hedge every harness feature ("if the harness ...").
 
@@ -27,7 +27,7 @@ Then read, in this order: `AGENTS.md`, `skills/i-have-adhd/SKILL.md`, `CONTRIBUT
 | every hook exits 0 on every failure path | one throw blocks session start for every user | keep the outer `try`/`catch`, the `existsSync` guards, and the `timeout` in `hooks/hooks.json` |
 | `SKILL.md` is injected IN FULL at `startup`, `resume`, `clear`, `compact` (flag `~/.claude/.i-have-adhd-always` exists here) | every added line is re-paid in every session, forever | delete a line before adding one; a new rule is one dense line, not a section |
 | `name` reads `i-have-adhd` in all 8 manifests | runtimes disagree about what is installed | descriptions are per-runtime BY DESIGN (`plugin.json:3` Antigravity, `.claude-plugin/plugin.json:4` Claude Code, `gemini-extension.json:4` Gemini CLI, `qwen-extension.json:4` Qwen Code) — never homogenize them |
-| version `0.2.0` identical across the six versioned manifests | runtimes report different versions | bump all six in one commit; agreement is checked by `claude plugin tag`, not by `validate` |
+| one version identical across the six versioned manifests (`0.3.1` today) | runtimes report different versions | bump all six in one commit; agreement is checked by `claude plugin tag`, not by `validate` |
 
 ## Verify: command, and when it is required
 
@@ -63,7 +63,7 @@ claude plugin install i-have-adhd@i-have-adhd --scope user
 claude plugin list --json                          # installPath must be the repo, not plugins/cache
 ```
 
-`~/.claude/settings.json → extraKnownMarketplaces` may still declare `ayghri/i-have-adhd`; drop that entry or it re-adds upstream. `.agents/plugins/marketplace.json` still hardcodes `ayghri/i-have-adhd.git` for the Codex path — accepted, or change it as an explicit fork delta. Restart Claude Code after the swap; the SessionStart hook only re-reads on a new session.
+`~/.claude/settings.json → extraKnownMarketplaces` declares the marketplace by name; it points at the fork today, and an entry naming `ayghri/i-have-adhd` would re-add upstream after any removal. `.agents/plugins/marketplace.json` uses `{"source": "local", "path": "./"}` so the Codex path follows whichever checkout the marketplace was added from — do not reintroduce a hardcoded upstream URL there. Restart Claude Code after the swap; the SessionStart hook only re-reads on a new session.
 
 ## Off-limits
 

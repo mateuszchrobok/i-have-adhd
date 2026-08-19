@@ -1,6 +1,6 @@
 # Agent guide
 
-This file is the map for agents working with [i-have-adhd](https://github.com/ayghri/i-have-adhd). Read it after locating or installing the repository. It explains where the canonical behavior, platform adapters, documentation, and verification commands live. It does not replace the skill rules in `skills/i-have-adhd/SKILL.md`.
+This file is the map for agents working with [i-have-adhd](https://github.com/ayghri/i-have-adhd). This checkout is a personal fork; see the banner in `README.md` and the fork-only `## Working agreement` section of the canonical skill. Read it after locating or installing the repository. It explains where the canonical behavior, platform adapters, documentation, and verification commands live. It does not replace the skill rules in `skills/i-have-adhd/SKILL.md`.
 
 ## Start here
 
@@ -27,6 +27,8 @@ Agents can access the complete project by reading repository-relative files afte
 | Other runtimes | `qwen-extension.json`, `kimi.plugin.json`, `gemini-extension.json`, `GEMINI.md`, `plugin.json` | Qwen, Kimi, Gemini, and additional plugin metadata. |
 | Documentation | `README.md`, `INSTALL.md`, `.github/readme/`, `.github/install/` | User-facing overview, installation, and translations. |
 | Verification | `tests/`, `scripts/` | Unit tests, compatibility checks, and evaluation tooling. |
+| Fork guards | `scripts/fork_guard.sh`, `.github/workflows/fork-guard.yml` | Every gate plus an upstream merge-conflict probe; the workflow is the only CI job running `unittest discover`. The script also runs weekly from cron on the owner's machine. |
+| Evaluations | `evals/` | Cases, rubric, and runner config. `run` bills a provider unless the runner points at a subscription gateway; `evals/results/` is gitignored. |
 | Contribution workflow | `CONTRIBUTING.md`, `.github/pull_request_template.md` | Authorship, labels, safety, review, and PR requirements. |
 
 ## Runtime entry points
@@ -54,10 +56,13 @@ When debugging or changing one integration, begin with its entry point:
 Run only checks relevant to the change, and report exact commands and results:
 
 ```bash
+cmp skills/i-have-adhd/SKILL.md .cursor/skills/i-have-adhd/SKILL.md   # after every skill edit
 python3 -m unittest discover -s tests -v
 python3 scripts/run_evals.py validate
 bun scripts/check_context_compat.ts
 claude plugin validate .
 ```
+
+`sh scripts/fork_guard.sh` runs all of the above plus the upstream merge probe and exits non-zero on any failure.
 
 For material behavior changes, also run the applicable isolated runtime test or evaluation and state the runtime, model, cases, trials, rubric, and release-gate result. Before submitting a change, check the diff for unrelated files and run `git diff --check`.

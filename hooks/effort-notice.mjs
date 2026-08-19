@@ -20,8 +20,11 @@ try {
   try {
     settings = JSON.parse(fs.readFileSync(path.join(claudeDir, "settings.json"), "utf8"));
   } catch {}
+  // `ultracode: true` is the only setting that delivers xhigh AND the standing
+  // dynamic-workflow orchestration; it feeds the same app-state field the /effort
+  // toggle writes. `effortLevel: "xhigh"` alone is xhigh WITHOUT orchestration, so
+  // it deliberately falls through to the notice.
   if (settings.ultracode === true) process.exit(0);
-  if (settings.effortLevel === "xhigh") process.exit(0);
 
   // Only the session's own report can contradict the settings, and it is often
   // absent here. Absent means unknown, not low.
@@ -30,7 +33,7 @@ try {
 
   const shown = effort || `settings.json effortLevel: ${settings.effortLevel || "unset"}`;
   process.stdout.write(
-    `EFFORT NOTICE: ${shown}. Run /effort ultracode for xhigh plus dynamic workflow orchestration, or persist it with "ultracode": true in settings.json.\n`,
+    `EFFORT NOTICE: ${shown}. Run /effort ultracode for xhigh plus dynamic workflow orchestration, or persist it with "ultracode": true in settings.json. Check with /effort status.\n`,
   );
 } catch {
   // Never block session start.

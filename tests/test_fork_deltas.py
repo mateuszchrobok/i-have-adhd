@@ -8,6 +8,7 @@ failing open.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -92,9 +93,13 @@ class EffortNoticeHookTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0)
                 self.assertEqual(result.stdout, "")
 
-    def test_silent_when_settings_persist_xhigh(self):
+    def test_xhigh_alone_still_earns_a_nudge(self):
+        # effortLevel "xhigh" raises effort but does NOT turn on the standing
+        # dynamic-workflow orchestration; only `ultracode: true` does. So this
+        # config falls through to the notice on purpose.
         result = self.run_hook(effort=None, settings={"effortLevel": "xhigh"})
-        self.assertEqual(result.stdout, "")
+        self.assertIn("EFFORT NOTICE", result.stdout)
+        self.assertIn("/effort status", result.stdout)
 
     def test_silent_at_top_tiers_reported_by_the_session(self):
         for effort in ("xhigh", "max"):
@@ -129,6 +134,65 @@ class EffortNoticeHookTest(unittest.TestCase):
         result = self.run_hook(effort="medium")
         self.assertEqual(result.returncode, 0)
         self.assertIn("EFFORT NOTICE", result.stdout)
+
+
+class ShippedClaimsTest(unittest.TestCase):
+    """Guards the claims that went stale once before, silently."""
+
+    def injected_ruleset(self):
+        # What hooks/always-on.mjs injects, minus its header line: the header
+        # embeds the flag path, so its length is machine-dependent and cannot be
+        # claimed in a document.
+        body = re.sub(
+            r"^---[^\S\r\n]*\r?\n[\s\S]*?\r?\n---[^\S\r\n]*(?:\r?\n|$)",
+            "",
+            SKILL.read_text(encoding="utf-8"),
+        )
+        return re.sub(r"(?:\r?\n)+$", "", body)
+
+    def test_working_agreement_sits_above_the_pre_send_check(self):
+        # What PR #7 bought, and what nothing guarded until now: at end of file,
+        # after "If yes, send.", the same bytes measured 0.98 weighted points worse.
+        body = SKILL.read_text(encoding="utf-8")
+        self.assertLess(
+            body.index("## Working agreement"),
+            body.index("## Pre-send check"),
+            "the working agreement must stay above the pre-send check",
+        )
+
+    def test_the_six_versioned_manifests_agree(self):
+        manifests = [
+            "package.json",
+            "qwen-extension.json",
+            "gemini-extension.json",
+            "kimi.plugin.json",
+            ".claude-plugin/plugin.json",
+            ".codex-plugin/plugin.json",
+        ]
+        versions = {
+            name: json.loads((ROOT / name).read_text())["version"] for name in manifests
+        }
+        self.assertEqual(
+            len(set(versions.values())), 1, f"manifest versions disagree: {versions}"
+        )
+
+    def test_readme_states_the_real_injected_size(self):
+        injected = self.injected_ruleset()
+        claim = re.search(
+            r"(\d+) lines / ~([\d.]+)k characters", (ROOT / "README.md").read_text()
+        )
+        self.assertIsNotNone(claim, "README no longer states the injected size")
+        self.assertEqual(
+            int(claim.group(1)),
+            injected.count("\n") + 1,
+            "README line count is stale",
+        )
+        self.assertAlmostEqual(
+            float(claim.group(2)),
+            len(injected) / 1000,
+            delta=0.15,
+            msg="README character count is stale",
+        )
 
 
 class HookRegistrationTest(unittest.TestCase):
