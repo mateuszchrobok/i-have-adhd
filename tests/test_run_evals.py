@@ -164,6 +164,42 @@ class EvaluationHarnessTest(unittest.TestCase):
             self.assertEqual(0, run_evals.run_evaluations(args))
             self.assertTrue(marker.exists())
 
+    def test_claude_json_parsing_survives_a_stray_second_document(self):
+        # The CLI normally prints one JSON document but was observed printing a
+        # second one, which made json.loads() on the whole buffer raise
+        # "Extra data" and discard a completed call.
+        result = json.dumps(
+            {
+                "type": "result",
+                "result": " hi ",
+                "usage": {"input_tokens": 5},
+                "total_cost_usd": 0.01,
+            }
+        )
+        stray = json.dumps({"type": "system", "subtype": "warning"})
+        for label, payload in (
+            ("single", result),
+            ("stray before", stray + "\n" + result),
+            ("stray after", result + "\n" + stray),
+            ("duplicate", result + "\n" + result),
+            ("trailing blank lines", result + "\n\n"),
+            ("trailing non-JSON text", result + "\nSomething not JSON at all\n"),
+            ("leading non-JSON text", "warning: noise\n" + result),
+        ):
+            with self.subTest(label):
+                text, usage, cost = run_evals._parse_response(payload, "claude-json")
+                self.assertEqual(text, "hi")
+                self.assertEqual(usage, {"input_tokens": 5})
+                self.assertEqual(cost, 0.01)
+
+    def test_claude_json_parsing_rejects_empty_output(self):
+        with self.assertRaises(ValueError):
+            run_evals._parse_response("   ", "claude-json")
+
+    def test_claude_json_parsing_rejects_output_with_no_json_at_all(self):
+        with self.assertRaises(json.JSONDecodeError):
+            run_evals._parse_response("not json, not even close", "claude-json")
+
     def test_completed_keys_support_resuming_partial_runs(self):
         rows = [
             {

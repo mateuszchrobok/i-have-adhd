@@ -182,11 +182,54 @@ def _condition_prompt(task: str, condition: str, skill_path: Path | None) -> str
     )
 
 
+def _last_result_document(output: str) -> dict[str, Any]:
+    """Return the final result object from a `claude --output-format json` stdout.
+
+    The CLI usually prints exactly one JSON document, but it intermittently
+    appends a second document or a fragment of non-JSON text (observed twice in
+    ~40 calls). `json.loads` on the whole buffer then dies with "Extra data" or
+    "Expecting value" and a completed, already-paid-for call is thrown away.
+    Decode documents in sequence, ignore trailing junk once at least one
+    document is in hand, and keep the last one that looks like a result.
+    """
+    decoder = json.JSONDecoder()
+    documents: list[dict[str, Any]] = []
+    index = 0
+    while index < len(output):
+        while index < len(output) and output[index].isspace():
+            index += 1
+        if index >= len(output):
+            break
+        try:
+            document, index = decoder.raw_decode(output, index)
+        except json.JSONDecodeError:
+            if documents:
+                print(
+                    f"warning: ignored {len(output) - index} trailing bytes of "
+                    f"non-JSON runner output: {output[index:index + 120]!r}",
+                    file=sys.stderr,
+                )
+                break
+            next_brace = output.find("{", index + 1)
+            if next_brace == -1:
+                raise
+            index = next_brace
+            continue
+        if isinstance(document, dict):
+            documents.append(document)
+    if not documents:
+        raise ValueError("Runner produced no JSON document")
+    for document in reversed(documents):
+        if document.get("type") == "result" or "result" in document:
+            return document
+    return documents[-1]
+
+
 def _parse_response(output: str, response_format: str) -> tuple[str, dict[str, Any], float | None]:
     if response_format == "text":
         return output.strip(), {}, None
     if response_format == "claude-json":
-        payload = json.loads(output)
+        payload = _last_result_document(output)
         return (
             str(payload.get("result", "")).strip(),
             payload.get("usage", {}) or {},
