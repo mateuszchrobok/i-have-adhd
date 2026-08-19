@@ -17,16 +17,50 @@
   <a href=".github/readme/README.ko.md" title="한국어" aria-label="한국어">🇰🇷</a>
 </p>
 
+> **This is a fork.** [mateuszchrobok/i-have-adhd](https://github.com/mateuszchrobok/i-have-adhd) tracks [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) and adds one unnumbered `## Working agreement` section at the end of `SKILL.md`: execution policy for this owner's setup — informal Polish address, `rtk` as the default shell, a parallelism cap and model tier, resume over restart, scheduled checks for monitored numbers, findings become issues. The 10 upstream rules are unchanged. Want the original? [Back to upstream](#back-to-upstream).
 
 ## Install
 
-Copy/paste into your CLI prompt:
+Claude Code. Fork and upstream both publish a marketplace named `i-have-adhd`, so an existing upstream install goes first:
 
-```text
-Install the i-have-adhd skill/plugin from https://github.com/ayghri/i-have-adhd, refer to the repo's AGENTS.md for instructions.
+```bash
+claude plugin uninstall i-have-adhd            # skip both if you never installed upstream
+claude plugin marketplace remove i-have-adhd
+claude plugin marketplace add mateuszchrobok/i-have-adhd
+claude plugin install i-have-adhd@i-have-adhd
 ```
 
-Or 🔗 [check the installation instructions](INSTALL.md).
+Restart Claude Code, then type `/i-have-adhd`.
+
+`claude plugin list` prints `i-have-adhd@i-have-adhd` for either one. The marketplace source is what tells them apart:
+
+```bash
+claude plugin marketplace list --json    # expect "repo": "mateuszchrobok/i-have-adhd"
+```
+
+Other harnesses: 🔗 [INSTALL.md](INSTALL.md), substituting `mateuszchrobok/i-have-adhd` for `ayghri/i-have-adhd`.
+
+### Always-on
+
+```bash
+touch ~/.claude/.i-have-adhd-always    # inject the ruleset at every session start
+rm ~/.claude/.i-have-adhd-always       # back to on-demand
+```
+
+The `SessionStart` hook fires only while that flag exists. This fork's `SKILL.md` makes the injection 170 lines / ~9.4k characters, paid once per session start, resume, clear and compact. `stop adhd mode` still turns it off for the current session.
+
+### Dev loop
+
+Iterate on a local checkout without pushing. Same name clash — only one `i-have-adhd` marketplace at a time:
+
+```bash
+claude plugin uninstall i-have-adhd
+claude plugin marketplace remove i-have-adhd
+claude plugin marketplace add /absolute/path/to/i-have-adhd   # repo root, not .claude-plugin/
+claude plugin install i-have-adhd@i-have-adhd
+```
+
+Run `claude plugin validate .` after editing a manifest, and restart Claude Code after every edit — the plugin index and hooks are read at startup.
 
 ## What it does
 
@@ -65,9 +99,7 @@ A skill for your coding assistant that stops it from burying the answer. Action 
 
 ## The rules
 
-10 rules. Full text in [SKILL.md](./skills/i-have-adhd/SKILL.md).
-
-This fork adds one unnumbered `## Working agreement` section at the end of SKILL.md — execution policy for this owner's setup (informal Polish address, rtk, parallelism and model tier, resume over restart, scheduled checks, findings become issues). The 10 rules above are untouched.
+10 rules, plus this fork's unnumbered `## Working agreement` section. Full text in [SKILL.md](./skills/i-have-adhd/SKILL.md).
 
 1. Lead with the next action.
 2. Number multi-step tasks.
@@ -80,18 +112,23 @@ This fork adds one unnumbered `## Working agreement` section at the end of SKILL
 9. Cap lists at 5 items.
 10. No preamble. No recap. No closers.
 
-## Tune it
-
-Fork, edit `skills/i-have-adhd/SKILL.md`, then swap your copy in:
+## Upgrade
 
 ```bash
-claude plugin uninstall i-have-adhd            # drop the upstream copy first:
-claude plugin marketplace remove i-have-adhd   # fork and upstream share both names
-claude plugin marketplace add <your-username>/i-have-adhd
-claude plugin install i-have-adhd@i-have-adhd
+claude plugin marketplace update i-have-adhd
+claude plugin update i-have-adhd@i-have-adhd
 ```
 
-Restart Claude Code, then re-invoke `/i-have-adhd`.
+Restart Claude Code. To take upstream's changes first: `git fetch upstream && git merge upstream/main`, keep the `<!-- fork-only -->` block, push to the fork, then run the two commands above.
+
+## Back to upstream
+
+```bash
+claude plugin uninstall i-have-adhd
+claude plugin marketplace remove i-have-adhd
+claude plugin marketplace add ayghri/i-have-adhd
+claude plugin install i-have-adhd@i-have-adhd
+```
 
 ## Credits
 
