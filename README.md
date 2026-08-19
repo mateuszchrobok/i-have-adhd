@@ -47,7 +47,7 @@ touch ~/.claude/.i-have-adhd-always    # inject the ruleset at every session sta
 rm ~/.claude/.i-have-adhd-always       # back to on-demand
 ```
 
-The `SessionStart` hook fires only while that flag exists. This fork's ruleset is 168 lines / ~9.2k characters, injected in full at every session start, resume, clear and compact. `stop adhd mode` still turns it off for the current session.
+The `SessionStart` hook fires only while that flag exists. This fork's ruleset is 168 lines / ~9.4k characters, injected in full at every session start, resume, clear and compact. `stop adhd mode` still turns it off for the current session.
 
 ### Dev loop
 

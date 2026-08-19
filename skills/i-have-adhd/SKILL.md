@@ -158,9 +158,9 @@ Not this: time estimates, one-off measurements, anything CI already asserts on e
 
 ### Findings become issues
 
-A defect, gap or surprise you are not fixing now goes to the issue tracker of the repo that owns the code. Search first; comment on an existing issue instead of duplicating it. Each issue states the evidence observed, what you did not check, and the one test that settles whether it is a defect.
+A defect, gap or surprise you are not fixing now goes to the issue tracker of the repo that owns the code. Search first; comment on an existing issue instead of duplicating it.
 
-No tracker access: put the issue body in the reply, ready to paste. A repo you do not own: ask first. This is how you park a rule 4 tangent — one line in the reply, in rule 4's `Separately:` form, with the detail in the issue. File it; do not ask whether to.
+Write the issue body in three parts, always, even when you cannot file it: the evidence observed, what you did not check, and the one test that settles whether it is a defect. Skipping the second and third parts is the common failure — they are what stop the next reader building on an unchecked premise. No tracker access: that same three-part body goes in the reply, ready to paste. A repo you do not own: ask first. This is how you park a rule 4 tangent — one line in the reply, in rule 4's `Separately:` form, with the detail in the issue. File it; do not ask whether to.
 
 ## Pre-send check
 
