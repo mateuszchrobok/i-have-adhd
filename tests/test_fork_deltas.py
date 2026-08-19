@@ -82,22 +82,37 @@ class EffortNoticeHookTest(unittest.TestCase):
             env=env,
         )
 
-    def test_silent_at_top_tiers(self):
-        for effort in ("xhigh", "max"):
-            result = self.run_hook(effort=effort)
-            self.assertEqual(result.returncode, 0)
-            self.assertEqual(result.stdout, "", f"expected silence at {effort}")
+    def test_silent_when_settings_persist_ultracode(self):
+        # Regression: CLAUDE_EFFORT is exported into the Bash tool environment
+        # but NOT into SessionStart hook processes. Treating its absence as
+        # "below xhigh" printed a false alarm on every session start.
+        for effort in (None, "high", "medium"):
+            with self.subTest(effort=effort):
+                result = self.run_hook(effort=effort, settings={"ultracode": True})
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
 
-    def test_one_line_below_top_tier(self):
-        result = self.run_hook(effort="high")
+    def test_silent_when_settings_persist_xhigh(self):
+        result = self.run_hook(effort=None, settings={"effortLevel": "xhigh"})
+        self.assertEqual(result.stdout, "")
+
+    def test_silent_at_top_tiers_reported_by_the_session(self):
+        for effort in ("xhigh", "max"):
+            with self.subTest(effort=effort):
+                result = self.run_hook(effort=effort, settings={"effortLevel": "high"})
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "", f"expected silence at {effort}")
+
+    def test_one_line_when_settings_ask_for_less(self):
+        result = self.run_hook(effort=None, settings={"effortLevel": "high"})
         self.assertEqual(result.returncode, 0)
         self.assertEqual(len(result.stdout.strip().splitlines()), 1)
         self.assertIn("EFFORT NOTICE", result.stdout)
         self.assertIn("high", result.stdout)
 
-    def test_reports_a_refused_persisted_setting(self):
-        result = self.run_hook(effort="high", settings={"ultracode": True})
-        self.assertIn("refused xhigh", result.stdout)
+    def test_names_the_session_tier_when_the_session_reports_one(self):
+        result = self.run_hook(effort="medium", settings={})
+        self.assertIn("EFFORT NOTICE: medium", result.stdout)
 
     def test_silent_without_the_opt_in_flag(self):
         result = self.run_hook(effort="low", flag=False)
