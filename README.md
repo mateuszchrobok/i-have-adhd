@@ -17,7 +17,7 @@
   <a href=".github/readme/README.ko.md" title="한국어" aria-label="한국어">🇰🇷</a>
 </p>
 
-> **This is a fork.** [mateuszchrobok/i-have-adhd](https://github.com/mateuszchrobok/i-have-adhd) tracks [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) and adds one unnumbered `## Working agreement` section at the end of `SKILL.md`: execution policy for this owner's setup — informal Polish address, `rtk` as the default shell, a parallelism cap and model tier, resume over restart, scheduled checks for monitored numbers, findings become issues. The 10 upstream rules are unchanged. Want the original? [Back to upstream](#back-to-upstream).
+> **This is a fork.** [mateuszchrobok/i-have-adhd](https://github.com/mateuszchrobok/i-have-adhd) tracks [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) and adds one unnumbered `## Working agreement` section to `SKILL.md`, immediately above `## Pre-send check`: execution policy for this owner's setup — informal Polish address, `rtk` as the default shell, a parallelism cap and model tier, resume over restart, scheduled checks for monitored numbers, findings become issues. The 10 upstream rules are unchanged. Want the original? [Back to upstream](#back-to-upstream).
 
 ## Install
 
@@ -47,7 +47,7 @@ touch ~/.claude/.i-have-adhd-always    # inject the ruleset at every session sta
 rm ~/.claude/.i-have-adhd-always       # back to on-demand
 ```
 
-The `SessionStart` hook fires only while that flag exists. This fork's `SKILL.md` makes the injection 170 lines / ~9.4k characters, paid once per session start, resume, clear and compact. `stop adhd mode` still turns it off for the current session.
+The `SessionStart` hook fires only while that flag exists. This fork's ruleset is 168 lines / ~9.2k characters, injected in full at every session start, resume, clear and compact. `stop adhd mode` still turns it off for the current session.
 
 ### Dev loop
 

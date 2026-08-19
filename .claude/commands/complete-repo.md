@@ -26,7 +26,7 @@ Report each exact command and its real output. "Should pass" is not a result.
 
 1. `git diff --check`, then read the full diff plus `git status --short`.
 2. Reject from the diff: unrelated files, absolute personal paths, anything copied out of `~/.claude`, secrets, drive-by reformatting.
-3. Rule count changed in `SKILL.md`? `README.md:68` and `.github/readme/README.{ja,ko,pt-BR,vi,zh-CN}.md:62` each state "10 rules" — either the addition stays unnumbered, or all six files change in this commit.
+3. Rule count changed in `SKILL.md`? `README.md:102` and `.github/readme/README.{ja,ko,pt-BR,vi,zh-CN}.md:62` each state "10 rules" — either the addition stays unnumbered, or all six files change in this commit.
 4. Behavior changed? Bump the version in all six versioned manifests in the same commit: `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, `package.json`, `gemini-extension.json`, `qwen-extension.json`, `kimi.plugin.json`. Docs-only: no bump, and say so.
 
 ### Phase 3 — commit, PR, todo state
@@ -50,7 +50,7 @@ Tell it two things so it does not re-derive work:
 1. Krok 4 issues are already drafted in Phase 4 — review that draft rather than deriving a second one.
 2. Krok 5 (A2A contracts) does not apply to this repo; expect it to say it skipped them.
 
-Feed it exactly three inputs: the gate results (command → real output), the PR URL, and the Phase 4 issue draft. Its summary runs six sections by design — that is the one place rule 9's five-item cap does not apply. Summary language: Polish, informal, no honorifics.
+Feed it exactly three inputs: the gate results (command → real output), the PR URL, and the Phase 4 issue draft. Its closing summary runs five sections, exactly at rule 9's cap. Summary language: Polish, informal, no honorifics.
 
 ## Not part of this routine
 
