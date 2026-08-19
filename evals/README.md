@@ -76,3 +76,28 @@ Two harness properties matter for signal quality, both fixed here:
 
 - Prompts must be self-contained. A prompt naming a file the model cannot open, under `--tools ""`, splits the response population into "answer" and "announce a read that never happens" — a bimodality that explained 84% of the variance on one case while the treatment explained 11%.
 - Responses containing literal tool markup are re-rolled by `run` rather than scored. They are the runner failing to give the model a legal action, not a datapoint about response style.
+
+## Clause checks
+
+The rubric measures reply shape. It cannot see whether a specific instruction fired — a per-response boolean disappears under a 1.06-point noise floor. `evals/clauses.jsonl` and `scripts/check_clauses.py` check that separately, by assertion rather than by judge:
+
+```bash
+python3 scripts/check_clauses.py --skill skills/i-have-adhd/SKILL.md --trials 3
+python3 scripts/check_clauses.py --trials 3     # no skill at all, for contrast
+```
+
+No judging, no scoring, and a result that means something at three trials. Measured on this fork, 3 trials, sandboxed:
+
+| clause | with the working agreement | bare model |
+| --- | ---: | ---: |
+| Address the reader directly | 3/3 | 3/3 |
+| Monitored numbers get a scheduled check | 3/3 | 0/3 |
+| Findings become issues | 3/3 | 0/3 |
+| assertions passed | **24/24** | 8/24 |
+
+Two rules learned building it:
+
+1. **Run the model somewhere empty.** From inside the checkout, a prompt describing a hypothetical repo lets the model inspect the real tree, discover the scenario does not exist, and correctly refuse — which measures its honesty, not the clause. The runner now uses a temporary directory.
+2. **Suspect the assertion before the skill.** Two apparent clause failures were regex gaps: `settle` did not match "Settling test:", and the not-checked pattern missed "haven't verified". Responses are saved to `--output`, so a widened pattern is re-scored offline for free. Never edit the skill to satisfy a pattern you have not first read the response against.
+
+Parallelism, resume and rtk are not covered here: they describe dispatch a text-only runner cannot perform.
