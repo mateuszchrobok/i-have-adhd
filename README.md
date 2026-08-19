@@ -67,6 +67,8 @@ A skill for your coding assistant that stops it from burying the answer. Action 
 
 10 rules. Full text in [SKILL.md](./skills/i-have-adhd/SKILL.md).
 
+This fork adds one unnumbered `## Working agreement` section at the end of SKILL.md — execution policy for this owner's setup (informal Polish address, rtk, parallelism and model tier, resume over restart, scheduled checks, findings become issues). The 10 rules above are untouched.
+
 1. Lead with the next action.
 2. Number multi-step tasks.
 3. End with one concrete next step.
