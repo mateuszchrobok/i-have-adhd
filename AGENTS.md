@@ -16,10 +16,12 @@ Agents can access the complete project by reading repository-relative files afte
 
 | Area | Location | Purpose |
 | --- | --- | --- |
-| Canonical skill | `skills/i-have-adhd/SKILL.md` | The source of truth for the 10 ADHD-friendly response rules. |
+| Canonical skill | `skills/i-have-adhd/SKILL.md` | The source of truth for the 10 ADHD-friendly response rules, plus this fork's `## Working agreement` section (execution policy: address, rtk, parallelism, resume, scheduled checks, issues). |
 | Skill mirror | `.cursor/skills/i-have-adhd/SKILL.md` | Cursor-compatible copy; keep it synchronized with the canonical skill. |
 | Claude and Codex metadata | `.claude-plugin/`, `.codex-plugin/`, `.agents/plugins/` | Plugin manifests and marketplace metadata. |
 | Shared hooks | `hooks/hooks.json`, `hooks/always-on.*` | Hook declarations and cross-platform always-on behavior. |
+| Fork hooks | `hooks/effort-notice.mjs` | Fork-only SessionStart notice when the session's effort tier is below `xhigh`; silent otherwise. |
+| Fork commands | `.claude/commands/init.md`, `.claude/commands/complete-repo.md` | Repo-local working agreement and end-of-work routine. Not shipped in any manifest. |
 | Pi and OMP | `package.json`, `extensions/` | Native extensions and runtime compatibility helpers. |
 | OpenCode | `opencode.json`, `.opencode/` | OpenCode plugin and command entry points. |
 | Other runtimes | `qwen-extension.json`, `kimi.plugin.json`, `gemini-extension.json`, `GEMINI.md`, `plugin.json` | Qwen, Kimi, Gemini, and additional plugin metadata. |

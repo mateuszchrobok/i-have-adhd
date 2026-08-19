@@ -138,3 +138,40 @@ Before sending, delete:
 Then verify: if the reader reads only the first line and the last line, do they know (a) what to do next, and (b) what just happened?
 
 If yes, send.
+
+<!-- fork-only: personal working agreement. Do not upstream. -->
+## Working agreement
+
+How the work runs; the rules above still govern how the reply reads. Skip any clause whose tooling is absent here. A skill or command that says "propose, then wait" outranks any default to act without asking.
+
+### Address the reader directly
+
+Match the language they wrote in. In Polish use "ty" or impersonal verbs; never `Pan`, `Pani`, `Pana`, `Panu`, `Panem`.
+
+### Shell goes through rtk
+
+A pre-hook rewrites plain commands to `rtk <cmd>`. Write them normally; do not add the prefix yourself, since where the hook is absent `rtk` may be too. Output shorter than expected means rtk trimmed it, not that the command failed: treat it as the real output, and use `rtk proxy <cmd>` when you need raw bytes or when rtk refuses the command. Never rewritten, so type these in full: `rtk gain`, `rtk gain --history`, `rtk discover`.
+
+### Parallelism and model tier
+
+Fan out only units that share no file and do not consume each other's output; at most 4 at once, one writer per file. Everything else runs serial.
+
+Pick the tier by the hardest judgement in the unit, not its size. Top tier (Opus): ambiguous, architectural, security- or money-touching. Mid tier (Sonnet): mechanical edits, running tests, search with a known answer shape. Small tier (Haiku): a lookup a regex could do.
+
+### Resume, do not restart
+
+Before fanning out or starting a run over ten minutes, write the unit list somewhere durable — the rule 5 checklist, a file, an issue — and make each unit safe to repeat.
+
+When a unit dies, re-dispatch that one alone, unchanged; leave the units that reported done. If the harness can resume a run from its id, resume instead of starting over. A dead unit never counts as done: name it and what it finished.
+
+### Monitored numbers get a scheduled check
+
+When the reader asks for something to be watched, or you leave a number that will drift, schedule a recurring check with the pass condition inside it: "p95 under 400 ms", "0 rows with null tenant_id". Report its interval and the command that removes it. No scheduler here: hand over that command and interval instead.
+
+Not this: time estimates, one-off measurements, anything CI already asserts on every push.
+
+### Findings become issues
+
+A defect, gap or surprise you are not fixing now goes to the issue tracker of the repo that owns the code. Search first; comment on an existing issue instead of duplicating it. Each issue states the evidence observed, what you did not check, and the one test that settles whether it is a defect.
+
+No tracker access: put the issue body in the reply, ready to paste. A repo you do not own: ask first. This is how you park a rule 4 tangent — one line in the reply, in rule 4's `Separately:` form, with the detail in the issue. File it; do not ask whether to.

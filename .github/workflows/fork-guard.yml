@@ -1,0 +1,27 @@
+name: fork deltas intact
+
+# New file, fork-only: the existing plugin-load-check runs
+# `tests.test_always_on_hooks` alone, not `unittest discover`, so
+# tests/test_fork_deltas.py would never run in CI without this job.
+# Guards the personal `## Working agreement` block, the .cursor mirror,
+# the 10-rule count, and the effort-notice hook's fail-open behavior.
+on:
+  push:
+  pull_request:
+    paths:
+      - skills/**
+      - .cursor/**
+      - hooks/**
+      - tests/test_fork_deltas.py
+      - .github/workflows/fork-guard.yml
+
+jobs:
+  fork-deltas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Fork delta guards
+        run: python -m unittest tests.test_fork_deltas -v

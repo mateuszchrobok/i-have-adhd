@@ -11,6 +11,17 @@
             "statusMessage": "Checking i-have-adhd always-on flag..."
           }
         ]
+      },
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"(async()=>{const root=process.env.CLAUDE_PLUGIN_ROOT||process.env.PLUGIN_ROOT;if(root)await import(require('node:url').pathToFileURL(require('node:path').join(root,'hooks','effort-notice.mjs')).href)})().catch(()=>{})\"",
+            "timeout": 10,
+            "statusMessage": "Checking effort tier..."
+          }
+        ]
       }
     ]
   }
