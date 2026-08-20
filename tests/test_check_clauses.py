@@ -2,6 +2,8 @@
 
 import importlib.util
 import json
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -55,6 +57,40 @@ class ClauseCatalogTest(unittest.TestCase):
         assertion = {"kind": "must_not_match", "pattern": "forbidden", "flags": "", "description": "no forbidden word"}
         self.assertTrue(check_clauses.evaluate("all clear", [assertion])[0]["passed"])
         self.assertFalse(check_clauses.evaluate("this is forbidden", [assertion])[0]["passed"])
+
+
+class ClauseGuardScriptTest(unittest.TestCase):
+    """The weekly guard spends model calls, so its refusal paths must be exact."""
+
+    def setUp(self):
+        self.script = ROOT / "scripts" / "clause_guard.sh"
+        self.sh = shutil.which("sh")
+        if not self.sh:
+            self.skipTest("sh not available")
+
+    def run_guard(self, base_url=None):
+        env = {"PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin", "HOME": str(Path.home())}
+        if base_url is not None:
+            env["ANTHROPIC_BASE_URL"] = base_url
+        return subprocess.run(
+            [self.sh, str(self.script)], check=False, capture_output=True, text=True, env=env
+        )
+
+    def test_refuses_without_a_gateway_url(self):
+        # --setting-sources "" stops the CLI reading settings.json, so its env
+        # block cannot supply this; inheriting a stale shell value is the bug.
+        result = self.run_guard()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("ANTHROPIC_BASE_URL is unset", result.stdout)
+
+    def test_skips_without_spending_calls_when_the_gateway_is_down(self):
+        result = self.run_guard("http://127.0.0.1:9")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("SKIP", result.stdout)
+
+    def test_points_at_the_assertion_first_on_failure(self):
+        body = self.script.read_text()
+        self.assertIn("Suspect the assertion before the skill", body)
 
 
 if __name__ == "__main__":
