@@ -38,6 +38,10 @@ Isolation also drops the operator's saved model and effort settings, so the clau
 
 Runs are resumable: rerun the same command after a provider failure and completed `(case, trial, condition, runner)` rows are skipped. Each incomplete call is retried twice by default, and the final provider error is preserved.
 
+That key deliberately omits the model and the skill file, so every row also carries a `treatment` fingerprint over the runner command, the condition and the bytes of `--condition-skill`. Change any of them and resume into the same `--output` is refused, naming both fingerprints. Without it, a changed treatment silently keeps the old rows and the file mixes two arms with nothing to detect it afterwards. Rows written before fingerprints existed are refused too, unless you pass `--allow-legacy-resume`.
+
+Rows that leaked tool markup carry `tool_markup: true` and are not judgeable — they are the runner failing to give the model a legal action. `python3 scripts/run_evals.py leaks <results.jsonl>` lists them and exits non-zero, so a bundle-building step can gate on it; `run` itself exits 3 when it had to write one.
+
 ## Judge and score
 
 Blind the `condition` field before judging. Write one JSON object per response with these fields:

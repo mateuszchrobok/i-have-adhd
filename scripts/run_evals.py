@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shlex
@@ -264,6 +265,67 @@ def _parse_response(output: str, response_format: str) -> tuple[str, dict[str, A
     raise ValueError(f"Unsupported response format: {response_format}")
 
 
+def _treatment_fingerprint(command: list[str], condition: str, skill_path: Path | None) -> str:
+    """Identify what was actually being tested, so a resume cannot mix treatments.
+
+    `completed_keys` deliberately keys on (case, trial, condition, runner) — that
+    is what makes a run resumable. It also means changing the model or the skill
+    file and rerunning into the same --output silently keeps the old rows. This
+    fingerprint is written on every row and checked on resume.
+    """
+    skill = b"" if skill_path is None else skill_path.read_bytes()
+    payload = "\x00".join([*command, condition]).encode("utf-8") + b"\x00" + skill
+    return hashlib.sha256(payload).hexdigest()[:16]
+
+
+def _check_resume_is_comparable(
+    prior_rows: list[dict[str, Any]],
+    condition: str,
+    runner: str,
+    fingerprint: str,
+    allow_legacy: bool,
+) -> None:
+    same_arm = [
+        row
+        for row in prior_rows
+        if row.get("condition") == condition and row.get("runner") == runner
+    ]
+    if not same_arm:
+        return
+    legacy = [row for row in same_arm if "treatment" not in row]
+    if legacy and not allow_legacy:
+        raise RuntimeError(
+            f"{len(legacy)} prior row(s) for condition {condition!r} predate treatment "
+            "fingerprints, so this run cannot prove they used the same model and skill "
+            "file. Use a fresh --output, or pass --allow-legacy-resume if you are certain."
+        )
+    mismatched = sorted(
+        {row["treatment"] for row in same_arm if row.get("treatment") not in (None, fingerprint)}
+    )
+    if mismatched:
+        raise RuntimeError(
+            f"Refusing to resume: prior rows for condition {condition!r} were produced by a "
+            f"different treatment ({', '.join(mismatched)}; this run is {fingerprint}). The "
+            "model, the runner command or the --condition-skill content changed. Use a fresh "
+            "--output — mixing them in one file is undetectable afterwards."
+        )
+
+
+def list_leaks(args: argparse.Namespace) -> int:
+    rows = read_jsonl(args.results)
+    leaked = [row for row in rows if row.get("tool_markup")]
+    if not leaked:
+        print(f"{len(rows)} rows, no tool markup.")
+        return 0
+    print(f"{len(leaked)} of {len(rows)} rows leaked tool markup and are not judgeable:")
+    for row in leaked:
+        print(
+            f"  {row.get('case_id')} trial {row.get('trial')} "
+            f"{row.get('condition')}/{row.get('runner')}"
+        )
+    return 1
+
+
 def run_evaluations(args: argparse.Namespace) -> int:
     cases = load_cases(args.cases)
     errors = validate_cases(cases)
@@ -283,6 +345,14 @@ def run_evaluations(args: argparse.Namespace) -> int:
         )
     reported_cost = 0.0
     prior_rows = read_jsonl(args.output) if args.output.exists() else []
+    fingerprint = _treatment_fingerprint(command, args.condition, args.condition_skill)
+    _check_resume_is_comparable(
+        prior_rows,
+        args.condition,
+        args.runner,
+        fingerprint,
+        getattr(args, "allow_legacy_resume", False),
+    )
     done = completed_keys(prior_rows)
     reported_cost = sum(
         float(row.get("cost_usd") or 0)
@@ -294,6 +364,7 @@ def run_evaluations(args: argparse.Namespace) -> int:
         raise ValueError("--budget-usd must be greater than 0 and no more than 25")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    leaked_rows: list[tuple[str, int]] = []
     with args.output.open("a", encoding="utf-8") as destination:
         for trial in range(1, args.trials + 1):
             for case in cases:
@@ -372,11 +443,23 @@ def run_evaluations(args: argparse.Namespace) -> int:
                     "usage": usage,
                     "cost_usd": cost,
                     "tool_markup": leaked,
+                    "treatment": fingerprint,
                 }
                 destination.write(json.dumps(row, ensure_ascii=False) + "\n")
                 destination.flush()
+                if leaked:
+                    leaked_rows.append((case["id"], trial))
                 print(f"{args.condition} trial {trial}: {case['id']}")
     print(f"Reported cost: ${reported_cost:.4f}")
+    if leaked_rows:
+        listing = ", ".join(f"{case_id} trial {trial}" for case_id, trial in leaked_rows)
+        print(
+            f"{len(leaked_rows)} row(s) leaked tool markup after every retry and are not "
+            f"judgeable: {listing}. Exclude them before scoring "
+            "(python3 scripts/run_evals.py leaks <output>).",
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 
@@ -406,8 +489,19 @@ def _build_parser() -> argparse.ArgumentParser:
     run.add_argument("--retries", type=int, default=2)
     run.add_argument("--budget-usd", type=float, default=25.0)
     run.add_argument("--allow-unmetered", action="store_true")
+    run.add_argument(
+        "--allow-legacy-resume",
+        action="store_true",
+        help="resume into a file whose prior rows predate treatment fingerprints",
+    )
     run.add_argument("--output", type=Path, required=True)
     run.set_defaults(handler=run_evaluations)
+
+    leaks = subparsers.add_parser(
+        "leaks", help="List rows that leaked tool markup and cannot be judged"
+    )
+    leaks.add_argument("results", type=Path)
+    leaks.set_defaults(handler=list_leaks)
     return parser
 
 
