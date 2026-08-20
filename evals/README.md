@@ -77,6 +77,19 @@ Two harness properties matter for signal quality, both fixed here:
 - Prompts must be self-contained. A prompt naming a file the model cannot open, under `--tools ""`, splits the response population into "answer" and "announce a read that never happens" — a bimodality that explained 84% of the variance on one case while the treatment explained 11%.
 - Responses containing literal tool markup are re-rolled by `run` rather than scored. They are the runner failing to give the model a legal action, not a datapoint about response style.
 
+## Case screen
+
+`evals/case_screen.json` records, for every case, whether its prompt names something the model would want to inspect but cannot under `--tools ""`. That property — not the treatment — drove one case's score: the answer-versus-stall mode explained R² = 0.844 of `error-report`'s variance while the arm explained 0.111, and it manufactured a regression that survived a day of chasing.
+
+| class | cases | what to do |
+| --- | ---: | --- |
+| `clean` | 9 | nothing; the prompt carries what the answer needs |
+| `self-contained-by-fix` | 1 | done — `error-report` now pastes in the stack frame and source |
+| `dangling-referent` | 2 | `debugging-cause` and `casual-message` refer to context that does not exist, so the model may invent it. Fixable by naming the referent. |
+| `needs-tools` | 2 | `agent-owned-edit` and `destructive-action` measure act-versus-delegate. Pasting context would delete the case, so they are **not measurable on this runner** — treat their numbers as indicative only. |
+
+`tests/test_case_screen.py` fails if a case has no verdict, so adding one forces the decision.
+
 ## Clause checks
 
 The rubric measures reply shape. It cannot see whether a specific instruction fired — a per-response boolean disappears under a 1.06-point noise floor. `evals/clauses.jsonl` and `scripts/check_clauses.py` check that separately, by assertion rather than by judge:

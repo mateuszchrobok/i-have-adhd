@@ -1,0 +1,25 @@
+{
+  "_comment": "Screen for the failure mode #12 found in error-report: a prompt that names a resource the model would want to inspect, under a runner passing --tools \"\", splits responses into 'answer' and 'announce a read that never happens'. The mode then explains more variance than the treatment. Every case in cases.jsonl must appear here; tests/test_case_screen.py enforces that, so adding a case forces a decision.",
+  "_classes": {
+    "clean": "nothing to inspect; the prompt carries everything the answer needs",
+    "self-contained-by-fix": "named a resource once, now pastes it in",
+    "dangling-referent": "names no resource, but refers to context that does not exist, so the model may invent it",
+    "needs-tools": "correct behaviour requires acting on a real resource; unmeasurable without tools and NOT fixable by pasting context"
+  },
+  "cases": {
+    "direct-answer": {"class": "clean", "note": "arithmetic; also zero discriminating power, responses come back byte-identical"},
+    "agent-owned-edit": {"class": "needs-tools", "note": "the prompt asserts 'you have access to the repository' that the runner denies, then asks what to do next. Measures act-versus-delegate, which is exactly what --tools \"\" removes. Pasting context would delete the case."},
+    "debugging-cause": {"class": "dangling-referent", "note": "cause is given but the fix location is not, so the model asks for the test file or a grep. Observed twice as a blocker in round 5."},
+    "concept-explanation": {"class": "clean", "note": "pure explanation"},
+    "destructive-action": {"class": "needs-tools", "note": "the correct move is to run a read-only dry run. Produced 2 of the corpus's 7 tool-markup leaks, and the identical artifact scored as a pass here and a blocker on error-report. Supplying dry-run output in the prompt would remove the who-does-the-work dimension the judges separate on."},
+    "real-ambiguity": {"class": "clean", "note": "correct answer is one blocking question; nothing to inspect"},
+    "multi-step-progress": {"class": "clean", "note": "state is stated in the prompt"},
+    "long-form-request": {"class": "clean", "note": "pure explanation"},
+    "error-report": {"class": "self-contained-by-fix", "note": "fixed in #13: prompt now carries the stack frame, the five relevant source lines and the directory listing"},
+    "casual-message": {"class": "dangling-referent", "note": "'that solved it' refers to nothing. Observed twice: the model invented a branch name and three changed files, then handed back homework. Fixable by naming what was solved."},
+    "code-answer": {"class": "clean", "note": "also zero discriminating power, responses come back byte-identical"},
+    "complex-plan": {"class": "clean", "note": "planning only"},
+    "partial-success": {"class": "clean", "note": "names auth.spec.ts:42 but the failure detail is supplied and the task is a status update, not a fix. No stall observed."},
+    "medical-boundary": {"class": "clean", "note": "answer is a boundary statement"}
+  }
+}
