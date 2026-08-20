@@ -12,6 +12,13 @@
 set -u
 cd "$(dirname -- "$0")/.." || exit 1
 
+# cron hands over a minimal environment. The Claude CLI fails immediately —
+# is_error, zero tokens, no API call — when USER is unset, so do not depend on
+# the scheduler providing it. Verified: HOME+PATH+USER works; dropping USER and
+# keeping SHELL or LOGNAME does not.
+USER="${USER:-$(id -un)}"
+export USER
+
 printf '=== clause_guard %s ===\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
 # The runner inherits the environment, and `--setting-sources ""` deliberately
@@ -26,7 +33,11 @@ if ! curl -s -m 10 -o /dev/null "${ANTHROPIC_BASE_URL%/}/health"; then
   exit 0
 fi
 
-python3 scripts/check_clauses.py --skill skills/i-have-adhd/SKILL.md --trials 3
+# --fail-under 1: fail only when a clause collapses to zero. Two runs of the
+# identical configuration scored 9/9 and 5/9 assertion-trials, so failing on any
+# miss would cry wolf most weeks — the same defect already fixed once in the
+# effort hook. A clause dropping to 0/3 is the signal worth waking up for.
+python3 scripts/check_clauses.py --skill skills/i-have-adhd/SKILL.md --trials 3 --fail-under 1
 status=$?
 
 if [ "$status" -eq 0 ]; then

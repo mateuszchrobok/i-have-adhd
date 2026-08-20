@@ -59,6 +59,19 @@ class ClauseCatalogTest(unittest.TestCase):
         self.assertFalse(check_clauses.evaluate("this is forbidden", [assertion])[0]["passed"])
 
 
+class FailUnderTest(unittest.TestCase):
+    """A recurring check must fail on collapse, not on sampling noise."""
+
+    def test_guard_uses_the_total_loss_threshold(self):
+        body = (ROOT / "scripts" / "clause_guard.sh").read_text()
+        self.assertIn("--fail-under 1", body)
+
+    def test_flag_is_documented_as_defaulting_to_any_miss(self):
+        body = (ROOT / "scripts" / "check_clauses.py").read_text()
+        self.assertIn('"--fail-under"', body)
+        self.assertIn("default is to fail on any miss", body)
+
+
 class ClauseGuardScriptTest(unittest.TestCase):
     """The weekly guard spends model calls, so its refusal paths must be exact."""
 
@@ -87,6 +100,15 @@ class ClauseGuardScriptTest(unittest.TestCase):
         result = self.run_guard("http://127.0.0.1:9")
         self.assertEqual(result.returncode, 0)
         self.assertIn("SKIP", result.stdout)
+
+    def test_does_not_depend_on_the_scheduler_providing_USER(self):
+        # The CLI fails immediately with USER unset (is_error, zero tokens, no
+        # API call), and cron hands over a minimal environment.
+        for script in ("clause_guard.sh", "fork_guard.sh"):
+            with self.subTest(script):
+                body = (ROOT / "scripts" / script).read_text()
+                self.assertIn('USER="${USER:-$(id -un)}"', body)
+                self.assertIn("export USER", body)
 
     def test_points_at_the_assertion_first_on_failure(self):
         body = self.script.read_text()
