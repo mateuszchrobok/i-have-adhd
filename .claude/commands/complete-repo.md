@@ -3,7 +3,7 @@ description: End-of-work routine for this repo — runs the repo gates (mirror, 
 ---
 
 ```bash
-cd /Users/M/work/i-have-adhd
+cd "$(git rev-parse --show-toplevel)"
 cp skills/i-have-adhd/SKILL.md .cursor/skills/i-have-adhd/SKILL.md && cmp skills/i-have-adhd/SKILL.md .cursor/skills/i-have-adhd/SKILL.md
 ```
 
