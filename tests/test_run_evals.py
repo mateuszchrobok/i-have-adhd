@@ -219,6 +219,68 @@ class EvaluationHarnessTest(unittest.TestCase):
         with self.assertRaises(json.JSONDecodeError):
             run_evals._parse_response("not json, not even close", "claude-json")
 
+    def test_fingerprint_separates_model_and_skill_changes(self):
+        skill = ROOT / "skills" / "i-have-adhd" / "SKILL.md"
+        base = run_evals._treatment_fingerprint(["claude", "--model", "a"], "candidate", skill)
+        self.assertEqual(
+            base, run_evals._treatment_fingerprint(["claude", "--model", "a"], "candidate", skill)
+        )
+        for label, other in (
+            ("model", run_evals._treatment_fingerprint(["claude", "--model", "b"], "candidate", skill)),
+            ("condition", run_evals._treatment_fingerprint(["claude", "--model", "a"], "comparator", skill)),
+            ("no skill", run_evals._treatment_fingerprint(["claude", "--model", "a"], "candidate", None)),
+        ):
+            with self.subTest(label):
+                self.assertNotEqual(base, other)
+
+    def test_resume_refuses_a_changed_treatment(self):
+        # The resume key is (case, trial, condition, runner) — it does not include
+        # the model or the skill file, so without this check a changed treatment
+        # silently keeps the old rows and the results file mixes two arms.
+        prior = [
+            {"case_id": "x", "trial": 1, "condition": "candidate", "runner": "claude", "treatment": "aaaa"}
+        ]
+        with self.assertRaises(RuntimeError) as caught:
+            run_evals._check_resume_is_comparable(prior, "candidate", "claude", "bbbb", False)
+        self.assertIn("different treatment", str(caught.exception))
+
+    def test_resume_accepts_the_same_treatment(self):
+        prior = [
+            {"case_id": "x", "trial": 1, "condition": "candidate", "runner": "claude", "treatment": "aaaa"}
+        ]
+        run_evals._check_resume_is_comparable(prior, "candidate", "claude", "aaaa", False)
+
+    def test_resume_ignores_other_arms(self):
+        prior = [
+            {"case_id": "x", "trial": 1, "condition": "comparator", "runner": "claude", "treatment": "zzzz"}
+        ]
+        run_evals._check_resume_is_comparable(prior, "candidate", "claude", "aaaa", False)
+
+    def test_resume_refuses_rows_predating_fingerprints_unless_allowed(self):
+        prior = [{"case_id": "x", "trial": 1, "condition": "candidate", "runner": "claude"}]
+        with self.assertRaises(RuntimeError) as caught:
+            run_evals._check_resume_is_comparable(prior, "candidate", "claude", "aaaa", False)
+        self.assertIn("predate treatment fingerprints", str(caught.exception))
+        run_evals._check_resume_is_comparable(prior, "candidate", "claude", "aaaa", True)
+
+    def test_leaks_lists_unjudgeable_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "results.jsonl"
+            path.write_text(
+                "\n".join(
+                    json.dumps(row)
+                    for row in (
+                        {"case_id": "a", "trial": 1, "condition": "candidate", "runner": "claude", "tool_markup": False},
+                        {"case_id": "b", "trial": 1, "condition": "candidate", "runner": "claude", "tool_markup": True},
+                    )
+                )
+                + "\n"
+            )
+            args = argparse.Namespace(results=path)
+            self.assertEqual(1, run_evals.list_leaks(args))
+            path.write_text(json.dumps({"case_id": "a", "tool_markup": False}) + "\n")
+            self.assertEqual(0, run_evals.list_leaks(args))
+
     def test_completed_keys_support_resuming_partial_runs(self):
         rows = [
             {
