@@ -195,6 +195,27 @@ class ShippedClaimsTest(unittest.TestCase):
         )
 
 
+class PortablePathsTest(unittest.TestCase):
+    """A public repo should not hardcode one machine's home directory."""
+
+    def test_no_tracked_file_hardcodes_a_home_directory(self):
+        tracked = subprocess.run(
+            ["git", "ls-files"], cwd=ROOT, check=True, capture_output=True, text=True
+        ).stdout.split()
+        offenders = []
+        for name in tracked:
+            path = ROOT / name
+            if not path.is_file() or path.suffix in {".png", ".jsonl"}:
+                continue
+            try:
+                body = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            if re.search(r"/Users/[A-Za-z0-9._-]+/", body) or re.search(r"\b10\.10\.10\.\d+", body):
+                offenders.append(name)
+        self.assertEqual([], offenders, "hardcoded local path or private address")
+
+
 class HookRegistrationTest(unittest.TestCase):
     def setUp(self):
         self.config = json.loads((ROOT / "hooks" / "hooks.json").read_text())

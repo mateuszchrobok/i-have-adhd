@@ -3,7 +3,7 @@ description: Working agreement for this fork of i-have-adhd — what we change, 
 ---
 
 ```bash
-cd /Users/M/work/i-have-adhd     # every command here is repo-relative
+cd "$(git rev-parse --show-toplevel)"   # every command here is repo-relative
 git status --short && git log --oneline -3
 git remote -v                    # no `upstream`? add it once:
 git remote add upstream https://github.com/ayghri/i-have-adhd.git
@@ -58,7 +58,7 @@ Make the working copy live without pushing (directory source, best dev loop):
 ```bash
 claude plugin uninstall i-have-adhd@i-have-adhd --scope user
 claude plugin marketplace remove i-have-adhd        # fork and upstream share the name
-claude plugin marketplace add /Users/M/work/i-have-adhd --scope user
+claude plugin marketplace add "$(pwd)" --scope user            # the repo root
 claude plugin install i-have-adhd@i-have-adhd --scope user
 claude plugin list --json                          # installPath must be the repo, not plugins/cache
 ```
