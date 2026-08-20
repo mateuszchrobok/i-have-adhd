@@ -73,6 +73,15 @@ def main() -> int:
     parser.add_argument("--skill", type=Path, help="omit to run with no skill at all")
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--budget-usd", type=float, default=3.0)
+    parser.add_argument(
+        "--fail-under",
+        type=int,
+        default=None,
+        help="exit 1 only when a clause passes fewer than N trials fully; "
+        "default is to fail on any miss. Use 1 for a recurring check: at three "
+        "trials the instrument cannot separate a clause that fires 70%% of the "
+        "time from one that fires always, so any-miss cries wolf.",
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
@@ -145,7 +154,23 @@ def main() -> int:
         args.output.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
 
     print(f"\n{failures} assertion(s) did not hold on every trial.")
-    return 1 if failures else 0
+    if args.fail_under is None:
+        return 1 if failures else 0
+    collapsed = [
+        clause["id"]
+        for clause in clauses
+        if sum(
+            all(r["passed"] for r in row["results"])
+            for row in rows
+            if row["clause_id"] == clause["id"]
+        )
+        < args.fail_under
+    ]
+    if collapsed:
+        print(f"below --fail-under {args.fail_under}: {', '.join(collapsed)}")
+        return 1
+    print(f"every clause cleared --fail-under {args.fail_under}")
+    return 0
 
 
 if __name__ == "__main__":

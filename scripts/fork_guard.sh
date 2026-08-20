@@ -13,6 +13,13 @@ cd "$(dirname -- "$0")/.." || exit 1
 status=0
 fail() { printf 'FAIL: %s\n' "$1"; status=1; }
 
+# cron hands over a minimal environment. The Claude CLI fails immediately —
+# is_error, zero tokens, no API call — when USER is unset, so do not depend on
+# the scheduler providing it. Verified: HOME+PATH+USER works; dropping USER and
+# keeping SHELL or LOGNAME does not.
+USER="${USER:-$(id -un)}"
+export USER
+
 printf '=== fork_guard %s ===\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
 cmp skills/i-have-adhd/SKILL.md .cursor/skills/i-have-adhd/SKILL.md >/dev/null 2>&1 \

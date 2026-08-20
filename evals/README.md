@@ -86,14 +86,19 @@ python3 scripts/check_clauses.py --skill skills/i-have-adhd/SKILL.md --trials 3
 python3 scripts/check_clauses.py --trials 3     # no skill at all, for contrast
 ```
 
-No judging, no scoring, and a result that means something at three trials. Measured on this fork, 3 trials, sandboxed:
+No judging, no scoring, and a result that survives at small samples. Measured on this fork, sandboxed, pooling two independent 3-trial runs of the identical configuration:
 
 | clause | with the working agreement | bare model |
 | --- | ---: | ---: |
-| Address the reader directly | 3/3 | 3/3 |
-| Monitored numbers get a scheduled check | 3/3 | 0/3 |
-| Findings become issues | 3/3 | 0/3 |
-| assertions passed | **24/24** | 8/24 |
+| Address the reader directly | 6/6 assertion-trials | 6/6 |
+| Monitored numbers get a scheduled check | 17/18 | 1/9 |
+| Findings become issues | 13/18 | 1/9 |
+
+**The clause is not the same as the rate.** The two runs scored 9/9 and 5/9 assertion-trials — identical prompts, identical skill file. A single 3-trial run reading 3/3 does not mean a clause fires every time: `Findings become issues` lands around 70-75%, not 100%. Report a pooled rate, never one run's pass/fail.
+
+`Address the reader directly` does not discriminate at all here: the bare model already answers in informal Polish on this prompt. That clause is insurance, not a measured effect.
+
+For a recurring check, pass `--fail-under 1` so only a clause collapsing to zero fails the run. Failing on any miss cries wolf most weeks.
 
 Two rules learned building it:
 
